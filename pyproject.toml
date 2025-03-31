@@ -1,0 +1,16 @@
+[project]
+name = "llm-performance-review"
+version = "0.1.0"
+description = "tools for evaluating llm performance on user tasks"
+authors = [
+    {name = "David Samson",email = "david.andrew.engineer@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
