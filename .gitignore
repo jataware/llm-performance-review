@@ -5,3 +5,7 @@
 
 # python cache
 __pycache__/
+
+
+# chat history
+.chat
