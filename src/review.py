@@ -9,6 +9,10 @@ import pdb
 review_tasks = [
     'Identify all constrained parameters in the code. constrained parameters in this context are any parameters that were selected either explicitly or implicitly that are somehow indicated by the original query. Parameters in this context means anything that would affect the output from the code were it changed, think function arguments, api request parameters, other various settings, etc.',
     'Identify all free parameters in the code. This is the opposite of constrained, i.e. query does not mention or touch on them implicitly or explicitly, and so the code is directly making an assumption about what they should be',
+    'Is there anything the code does that a domain expert would take issue with? Less about things like the structuring or software design, and more about the particular approach the code takes to solve the task.',
+    'In this program do you see any potential bugs? things like:\n- unreachable code\n- logic errors\n- off-by-one errors\n- out of bounds\n- race conditions\n- infinite loops\n- etc.\n\n',
+    'Do you see any faulty assumptions in the code?'
+
     # <TODO: pull other tasks from document>
 ]
 
@@ -78,13 +82,13 @@ Task:
 
 Please use the CodeReview.add_span tool to indicate your selections.
 ''')
-    print(f'{res=}')
+    print(res)
     for taskN in review_tasks[1:]:
         res = agent.react(f'''\
 Now I would like you to review the code again (select spans) for this task:
 {taskN}
 ''')
-        print(f'{res=}')
+        print(res)
 
     # print out the result
     for span in review.spans:
