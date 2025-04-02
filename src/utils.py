@@ -41,6 +41,7 @@ class VagueSpan:
 class Span:
     start: int
     stop: int
+    reason: str
 
 
 def pinpoint_span(vague_span:VagueSpan, content:str, match_tolerance:float=0.9) -> Span:
@@ -57,8 +58,18 @@ def pinpoint_span(vague_span:VagueSpan, content:str, match_tolerance:float=0.9) 
         Span: A concrete span with start and stop indices.
     """
     lines = content.splitlines()
-    pdb.set_trace()
-    ...
+    start_line = vague_span.start_line - 1
+    prefix = '\n'.join(lines[:start_line])  # everything before the start line
+    subset = '\n'.join(lines[start_line:])  # everything from the start line onwards
+    
+    # TODO: better more tolerant matching here
+    subset_start = subset.find(vague_span.quote)
+    if subset_start == -1:
+        raise ValueError(f"Quote not found in content starting from line {vague_span.start_line}: {vague_span.quote!r}. Specified start line's content is {lines[start_line]!r}")
+    
+    start = len(prefix) + subset_start + int(start_line > 0)
+    stop = start + len(vague_span.quote)
+    return Span(start=start, stop=stop, reason=vague_span.reason)
 
 
 
