@@ -1218,6 +1218,11 @@ dependencies = [
     { name = "switchai" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "rich" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "adhoc-api", specifier = ">=2.0.4" },
@@ -1226,6 +1231,9 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.1" },
     { name = "switchai", specifier = ">=0.6.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "rich", specifier = ">=13.9.4" }]
 
 [[package]]
 name = "markdown-it-py"

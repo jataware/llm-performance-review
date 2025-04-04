@@ -9,9 +9,9 @@ import pdb
 review_tasks = [
     'Identify all constrained parameters in the code. constrained parameters in this context are any parameters that were selected either explicitly or implicitly that are somehow indicated by the original query. Parameters in this context means anything that would affect the output from the code were it changed, think function arguments, api request parameters, other various settings, etc.',
     'Identify all free parameters in the code. This is the opposite of constrained, i.e. query does not mention or touch on them implicitly or explicitly, and so the code is directly making an assumption about what they should be',
-    'Is there anything the code does that a domain expert would take issue with? Less about things like the structuring or software design, and more about the particular approach the code takes to solve the task.',
+    'Is there anything the code does that a domain expert would take issue with? Less about things like the structuring or software design, and more about the particular approach the code takes to solve the task',
     'In this program do you see any potential bugs? things like:\n- unreachable code\n- logic errors\n- off-by-one errors\n- out of bounds\n- race conditions\n- infinite loops\n- etc.\n\n',
-    'Do you see any faulty assumptions in the code?'
+    'Do you see any faulty assumptions in the code?',
 
     # <TODO: pull other tasks from document>
 ]
@@ -33,18 +33,21 @@ class CodeReview:
         self.spans: list[Span] = []
     
     @tool
-    def add_span(self, span: VagueSpan) -> bool:
+    def add_span(self, start_line:int, quote: str, reason: str) -> bool:
         """
         Identify a span of code that matches the given criteria, and save it to the list of spans.
 
         Args:
-            span (VagueSpan): A span object containing the start line `start_line`, code quote `quote`, and reasoning `reason` for selection. 
+            start_line (int): The line number on which the span starts (use line numbers as they appear in the code)
+            quote (str): A verbatim string of the entire portion of code that you are selecting. Do not include line numbers in this quote
+            reason (str): A brief explanation of why you selected this span
         
         Returns:
             bool: returns True if the span was successfully added
         """
             # TBD if tell the agent this below, perhaps pinpoint span will check against both versions
             # Note: the code quote should not include the line numbers
+        span = VagueSpan(start_line=start_line, quote=quote, reason=reason)
         span = pinpoint_span(span, self.example['code'])
         self.spans.append(span)
         return True
