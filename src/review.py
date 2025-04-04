@@ -85,17 +85,18 @@ Task:
 
 Please use the CodeReview.add_span tool to indicate your selections.
 ''')
-    print(res)
+    # print(res)
     for taskN in review_tasks[1:]:
         res = agent.react(f'''\
 Now I would like you to review the code again (select spans) for this task:
 {taskN}
 ''')
-        print(res)
+        # print(res)
+    return review.spans
 
-    # print out the result
-    for span in review.spans:
-        print(f'Span:\n```\n{example["code"][span.start:span.stop]}\n```\n\nReason: {span.reason}\n')
+    # # print out the result
+    # for span in review.spans:
+    #     print(f'Span:\n```\n{example["code"][span.start:span.stop]}\n```\n\nReason: {span.reason}\n')
     
     # client = SwitchAI(provider="openai", model_name="gpt-4o")
     # lined_code = add_line_numbers(example['code'])

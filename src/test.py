@@ -59,12 +59,16 @@ def test_example():
 
 
 def test_review():
-    examples = load_examples(here/'../examples/cbioportal_examples.yaml')
+    from .display import explain_code
+    examples = load_examples(here/'../examples/gdc_examples.yaml')
     example = examples[0]
     spans = review_code(example)
-    for span in spans:
-        selection = example['code'][span.start:span.stop]
-        print(f'```\n{selection}\n```\n\nReason: {span.reason}\n')
+    explain_code(example['code'], spans)
+    
+    # print('-'*120)
+    # for span in spans:
+    #     selection = example['code'][span.start:span.stop]
+    #     print(f'```\n{selection}\n```\n\nReason: {span.reason}\n')
 
 
 

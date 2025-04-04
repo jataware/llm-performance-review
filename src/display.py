@@ -3,6 +3,7 @@ from rich.syntax import Syntax
 from rich.text import Text
 from rich.panel import Panel
 from rich.columns import Columns
+from rich.table import Table
 
 # from dataclasses import dataclass
 
@@ -31,7 +32,7 @@ def explain_code(source_code: str, spans: list[Span]):
 
     # Apply color highlights to spans
     colors = ["on red", "on green", "on yellow", "on cyan", "on magenta", "on blue"]
-    labels = []
+    labels: list[tuple[str, str, str]] = []
 
     for i, span in enumerate(spans):
         label = f"[{i + 1}]"
@@ -44,13 +45,15 @@ def explain_code(source_code: str, spans: list[Span]):
     # Left panel: highlighted code
     code_panel = Panel(code_text, title="Source Code", border_style="blue")
 
-    # Right panel: explanations
-    explanation_text = Text()
-    for label, color, expl in labels:
-        explanation_text.append(f"{label}", style=color)
-        explanation_text.append(f" {expl}\n", style="white")
+    # Right panel: explanations using a table for indentation
+    explanation_table = Table(show_header=False, box=None, padding=(1, 1, 0, 0))
+    explanation_table.add_column("Label", width=len(str(len(spans)))+2, style="bold", justify="right")
+    explanation_table.add_column("Explanation", style="white", overflow="fold")
 
-    explanation_panel = Panel(explanation_text, title="Explanations", border_style="green")
+    for label, color, expl in labels:
+        explanation_table.add_row(Text(f'{label}', style=color), Text(f'{expl}'))
+
+    explanation_panel = Panel(explanation_table, title="Explanations", border_style="green")
 
     # Display side by side
     console.print(Columns([code_panel, explanation_panel]))
