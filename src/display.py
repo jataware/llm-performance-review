@@ -5,16 +5,10 @@ from rich.panel import Panel
 from rich.columns import Columns
 from rich.table import Table
 
-# from dataclasses import dataclass
-
-# @dataclass
-# class Span:
-#     start: int
-#     end: int
-#     explanation: str
 
 from .utils import Span
 
+import pdb
 
 
 def explain_code(source_code: str, spans: list[Span]):
@@ -57,6 +51,65 @@ def explain_code(source_code: str, spans: list[Span]):
 
     # Display side by side
     console.print(Columns([code_panel, explanation_panel]))
+
+
+def merge_spans(left: Span, right: Span) -> Span:
+    """Merges two spans into one."""
+    return Span(
+        min(left.start, right.start),
+        max(left.stop, right.stop),
+        f'{left.reason}\n{"-" * 80}\n{right.reason}',
+    )
+
+def handle_overlaps(spans: list[Span]):
+    """
+    Merges spans that overlap the exact same or almost exact range.
+    """
+    spans = sorted(spans, key=lambda x: (x.start, x.stop))
+    # merged_spans = []
+    i = 0
+    while i < len(spans) - 1:
+        left = spans[i]
+        right = spans[i + 1]
+
+        
+        # # if the spans are identical
+        # if left.start == right.start and left.stop == right.stop:
+        #     spans[i] = merge_spans(left, right)
+        #     del spans[i + 1]
+        #     continue
+
+        # # if the overlap is close enough
+        # dstart = abs(left.start - right.start)
+        # dstop = abs(left.stop - right.stop)
+        # overlap = abs(min(left.stop, right.stop) - max(left.start, right.start))
+        # if (dstart + dstop) / overlap < 0.1:
+        #     spans[i] = merge_spans(left, right)
+        #     del spans[i + 1]
+        #     continue
+
+        # if left or right is completely inside the other
+        if left.start < right.start and left.stop > right.stop:
+            i += 2
+            continue
+        if right.start < left.start and right.stop > left.stop:
+            i += 2
+            continue
+        
+        # in the case of any overlap at all
+        # TODO: for now just merge them, but probably want something better...
+        if left.start < right.start and left.stop > right.start:
+            spans[i] = merge_spans(left, right)
+            del spans[i + 1]
+            continue
+
+        # otherwise the spans should have no overlap
+        i += 1
+
+
+
+
+
 
 if __name__ == "__main__":
     # Example 1
