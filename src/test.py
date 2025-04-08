@@ -61,9 +61,9 @@ def test_example():
 def test_review():
     from .display import explain_code
     examples = load_examples(here/'../examples/gdc_examples.yaml')
-    example = examples[0]
-    spans = review_code(example)
-    explain_code(example['code'], spans)
+    for example in examples:
+        spans = review_code(example)
+        explain_code(example['code'], spans)
     
     # print('-'*120)
     # for span in spans:

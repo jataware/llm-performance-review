@@ -16,7 +16,7 @@ def explain_code(source_code: str, spans: list[Span]):
     Displays source code with highlighted spans and explanations.
     """
     # handle merging any overlapping spans
-    handle_overlaps(spans)
+    spans = handle_overlaps(spans)
 
     console = Console()
 
@@ -64,18 +64,28 @@ def merge_spans(left: Span, right: Span) -> Span:
         f'{left.reason}\n{"-" * 80}\n{right.reason}',
     )
 
-def handle_overlaps(spans: list[Span]):
+def handle_overlaps(spans: list[Span]) -> list[Span]:
+    # repeat span merging until there are no more overlaps
+    n_spans = len(spans)
+    while True:
+        spans=_handle_overlaps(spans)
+        if len(spans) == n_spans:
+            break
+        n_spans = len(spans)
+    return spans
+
+def _handle_overlaps(spans: list[Span]) -> list[Span]:
     """
     Merges spans that overlap the exact same or almost exact range.
     """
     spans = sorted(spans, key=lambda x: (x.start, x.stop))
-    # merged_spans = []
+
     i = 0
     while i < len(spans) - 1:
         left = spans[i]
         right = spans[i + 1]
 
-        
+
         # # if the spans are identical
         # if left.start == right.start and left.stop == right.stop:
         #     spans[i] = merge_spans(left, right)
@@ -91,23 +101,26 @@ def handle_overlaps(spans: list[Span]):
         #     del spans[i + 1]
         #     continue
 
-        # if left or right is completely inside the other
+        # if right is completely inside the left, it's ok
         if left.start < right.start and left.stop > right.stop:
-            i += 2
+            i += 1
             continue
-        if right.start < left.start and right.stop > left.stop:
-            i += 2
-            continue
+        # if right.start < left.start and right.stop > left.stop:
+        #     # i += 2
+        #     j += 1
+        #     continue
         
         # in the case of any overlap at all
         # TODO: for now just merge them, but probably want something better...
-        if left.start < right.start and left.stop > right.start:
+        if left.start <= right.start and left.stop >= right.start:
             spans[i] = merge_spans(left, right)
             del spans[i + 1]
             continue
 
         # otherwise the spans should have no overlap
         i += 1
+
+    return spans
 
 
 
