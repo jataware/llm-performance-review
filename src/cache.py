@@ -7,6 +7,7 @@ import json
 
 from pathlib import Path
 
+import pdb
 
 def caller_here():
     # Get the frame of the caller of the function
@@ -29,6 +30,28 @@ def p(*args):
 
 R = TypeVar("R", covariant=True)
 P = ParamSpec("P")
+
+
+def freeze(obj):
+    # if the object is hashable, return it as is
+    try:
+        hash(obj)
+        return obj
+    except TypeError:
+        pass
+    
+    # convert known unhashable types to hashable types
+    if isinstance(obj, dict):
+        return tuple((freeze(k), freeze(v)) for k, v in sorted(obj.items()))
+    elif isinstance(obj, (list, tuple)):
+        return tuple(freeze(i) for i in obj)
+    elif isinstance(obj, set):
+        return frozenset(freeze(i) for i in obj)
+    elif isinstance(obj, (int, float, str, bool, type(None))):
+        return obj  # already hashable
+    else:
+        raise TypeError(f"Unhashable and unfreezable type: ({type(obj)}): {obj}")
+
 
 
 Serializable = dict | list | str | int | float | bool | None
@@ -66,20 +89,13 @@ def diskcache(func=None, /, *, serializer=identity, deserializer=identity, cache
     def decorator(f: Callable[P, R]):
         nonlocal cache_path
         if cache_path is None:
-            # use the function name and signature to generate a unique cache file name
-            # file_safe_sig = f.__name__ + str(inspect.signature(f)) \
-            #     .replace(' ', '')    \
-            #     .replace(':', '.')   \
-            #     .replace('->', '--') \
-            #     .replace(',', '_')   \
-            #     .replace('=', '-')
-            cache_path = caller_here() / make_filesafe_signature(f) #f'{p(f.__code__.co_filename).name}.{file_safe_sig}.cache'
+            cache_path = caller_here() / make_filesafe_signature(f)
 
         # load the cache from the file
         cache: dict[P, R]
         try:
             lines = cache_path.read_text().splitlines()
-            cache = {(tuple(args), tuple(map(tuple, kwargs))): deserializer(value)
+            cache = {freeze((tuple(args), tuple(map(tuple, kwargs)))): deserializer(value)
                      for (args, kwargs), value in map(json.loads, lines)}
         except FileNotFoundError:
             # create an empty cache file
@@ -91,7 +107,7 @@ def diskcache(func=None, /, *, serializer=identity, deserializer=identity, cache
         atexit.register(cache_file.close)
 
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            key = (tuple(args), tuple(kwargs.items()))
+            key = freeze((tuple(args), tuple(kwargs.items())))
             if key in cache:
                 return cache[key]
 
@@ -116,18 +132,17 @@ def make_filesafe_signature(f:Callable[P, R]) -> str:
     if os in flexible_os:
         # linux is pretty flexible with file names, so we can use mostly the original signature
         f_sig = f_sig.replace("/", "\\")
-        filesafe_sig = f'({f.__name__}{f_sig})'
     
     else:
         # fallback to the safe signature generation for non-Linux systems
-        filesafe_sig = f.__name__ + f_sig \
+        f_sig = f_sig \
             .replace(' ', '')    \
             .replace(':', '.')   \
             .replace('->', '--') \
             .replace(',', '_')   \
             .replace('=', '-')
 
-    return f'{p(f.__code__.co_filename).name}.{filesafe_sig}.cache'
+    return f'{p(f.__code__.co_filename).name}.cache.({f.__name__}{f_sig})'
 
 
 if __name__ == '__main__':

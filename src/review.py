@@ -63,8 +63,22 @@ class CodeReview:
         """
         return add_line_numbers(self.example['code'])
         
-    
+from .cache import diskcache
+def serialize_example(spans: list[Span]) -> list[dict]:
+    return [{
+        'start': span.start,
+        'stop': span.stop,
+        'reason': span.reason
+    } for span in spans]
 
+def deserialize_example(span_dics: list[dict]) -> list[Span]:
+    return [Span(
+        start=span_dic['start'],
+        stop=span_dic['stop'],
+        reason=span_dic['reason']
+    ) for span_dic in span_dics]
+
+@diskcache(serializer=serialize_example, deserializer=deserialize_example)
 def review_code(example: Example) -> list[Span]:
     task0 = review_tasks[0]
     review = CodeReview(example)

@@ -15,6 +15,9 @@ def explain_code(source_code: str, spans: list[Span]):
     """
     Displays source code with highlighted spans and explanations.
     """
+    # handle merging any overlapping spans
+    handle_overlaps(spans)
+
     console = Console()
 
     # Sort spans so we don’t mess up indexes when inserting highlights
