@@ -40,7 +40,7 @@ def explain_code(source_code: str, spans: list[Span]):
         labels.append((label, color, span.reason))
 
     # Left panel: highlighted code
-    code_panel = Panel(code_text, title="Source Code", border_style="blue")
+    code_panel = Panel(code_text, title="Source Code", border_style="blue", width=80)
 
     # Right panel: explanations using a table for indentation
     explanation_table = Table(show_header=False, box=None, padding=(1, 1, 0, 0))
@@ -50,7 +50,7 @@ def explain_code(source_code: str, spans: list[Span]):
     for label, color, expl in labels:
         explanation_table.add_row(Text(f'{label}', style=color), Text(f'{expl}'))
 
-    explanation_panel = Panel(explanation_table, title="Explanations", border_style="green")
+    explanation_panel = Panel(explanation_table, title="Explanations", border_style="green", width=90)
 
     # Display side by side
     console.print(Columns([code_panel, explanation_panel]))
