@@ -1,7 +1,15 @@
 # from switchai import SwitchAI
-from .utils import Example, VagueSpan, Span, pinpoint_span, add_line_numbers
+from .utils import Example, VagueSpan, Span, serialize_span, deserialize_span, vectorize, pinpoint_span, add_line_numbers
+from .cache import diskcache
+
 from archytas.tool_utils import tool
 from archytas.react import ReActAgent
+# from archytas.agent import Message, Role
+from langchain_core.messages import HumanMessage
+from pathlib import Path
+
+
+here = Path(__file__).parent
 
 import pdb
 
@@ -11,7 +19,7 @@ review_tasks = [
     'Identify all free parameters in the code. This is the opposite of constrained, i.e. query does not mention or touch on them implicitly or explicitly, and so the code is directly making an assumption about what they should be',
     'Is there anything the code does that a domain expert would take issue with? Assume said expert was the one who made the original query. This is less about things like the structuring or software design, and more about the particular approach the code takes to solve the task',
     'In this program do you see any potential bugs? things like:\n- unreachable code\n- logic errors\n- off-by-one errors\n- out of bounds\n- race conditions\n- infinite loops\n- etc.\n\n',
-    'Do you see any faulty assumptions in the code?',
+    'Based on the kinds of examples of code issues, are there any other issues in the code that you should to point out?',
 
     # <TODO: pull other tasks from document>
 ]
@@ -63,29 +71,26 @@ class CodeReview:
         """
         return add_line_numbers(self.example['code'])
         
-from .cache import diskcache
-def serialize_example(spans: list[Span]) -> list[dict]:
-    return [{
-        'start': span.start,
-        'stop': span.stop,
-        'reason': span.reason
-    } for span in spans]
 
-def deserialize_example(span_dics: list[dict]) -> list[Span]:
-    return [Span(
-        start=span_dic['start'],
-        stop=span_dic['stop'],
-        reason=span_dic['reason']
-    ) for span_dic in span_dics]
 
-@diskcache(serializer=serialize_example, deserializer=deserialize_example)
+@diskcache(serializer=vectorize(serialize_span), deserializer=vectorize(deserialize_span))
 def review_code(example: Example) -> list[Span]:
     task0 = review_tasks[0]
     review = CodeReview(example)
     tools = [review]
-    agent = ReActAgent(model='gpt-4o', tools=tools, allow_ask_user=False, verbose=False)
+    prompt_message = HumanMessage(content=f'''\
+You are an expert code reviewer. Your job is to identify various assumptions or deficiencies in given pieces of code.
+Here is a large collection of the kinds of issues you should be looking for: 
+{(here / 'code-issues-examples.md').read_text()}
+
+
+{'-'*80}
+
+In general, I will give you a piece of code, the task that the code was attempting to complete, and a specific direction for the kind of issues to look for. At a high level, the goal is to identify sections that might need review from a domain expert.
+''')
+    agent = ReActAgent(model='gpt-4o', tools=tools, messages=[prompt_message], allow_ask_user=False, verbose=False)
     res = agent.react(f'''\
-I have the following piece of code that I would like your help reviewing. At a high level, our goal it to identify portions of the code that we might want a domain expert to review.
+Please review the following code
                 
 Code:
 ```python

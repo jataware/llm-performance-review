@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Callable, TypeVar, ParamSpec
 from typing_extensions import NotRequired, TypedDict
 import yaml
 from yaml.loader import SafeLoader
@@ -42,6 +42,29 @@ class Span:
     start: int
     stop: int
     reason: str
+
+
+def serialize_span(span: Span) -> dict:
+    return {
+        'start': span.start,
+        'stop': span.stop,
+        'reason': span.reason
+    }
+
+def deserialize_span(span_dict: dict) -> Span:
+    return Span(
+        start=span_dict['start'],
+        stop=span_dict['stop'],
+        reason=span_dict['reason']
+    )
+
+
+P = ParamSpec('P')
+R = TypeVar('R')
+def vectorize(f: Callable[P, R]) -> Callable[[list[P]], list[R]]:
+    def vectorized(xs: list[P]) -> list[R]:
+        return [f(x) for x in xs] 
+    return vectorized
 
 
 def pinpoint_span(vague_span:VagueSpan, content:str, match_tolerance:float=0.9) -> Span:

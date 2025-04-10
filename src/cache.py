@@ -58,6 +58,8 @@ Serializable = dict | list | str | int | float | bool | None
 
 identity = lambda x: x  # type: ignore
 
+# TODO: diskcache should hash the function body and save it in the cache file, so it knows to invalidate the cache if the hash doesn't match
+# TODO: also ideally diskcache could be more automatic about serialization e.g. it can probably figure it out in a lot of cases
 @overload
 def diskcache(func: Callable[P, R], /) -> Callable[P, R]: ...
 @overload
@@ -67,7 +69,6 @@ def diskcache(
     deserializer: Callable[[Serializable], R] = identity,
     cache_path: Path | None = None
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
-
 def diskcache(func=None, /, *, serializer=identity, deserializer=identity, cache_path: Path|None = None):
     """
     decorator that acts like @cache, but stores the cache in a file on disk
