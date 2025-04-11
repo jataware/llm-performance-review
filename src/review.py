@@ -53,8 +53,8 @@ class CodeReview:
         Returns:
             bool: returns True if the span was successfully added
         """
-            # TBD if tell the agent this below, perhaps pinpoint span will check against both versions
-            # Note: the code quote should not include the line numbers
+        # TBD if tell the agent this below, perhaps pinpoint span will check against both versions
+        # Note: the code quote should not include the line numbers
         span = VagueSpan(start_line=start_line, quote=quote, reason=reason)
         span = pinpoint_span(span, self.example['code'])
         self.spans.append(span)

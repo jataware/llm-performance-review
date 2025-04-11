@@ -24,8 +24,10 @@ def explain_code(source_code: str, spans: list[Span]):
     spans = sorted(spans, key=lambda x: x.start)
 
     # Create a plain Text object with syntax highlighting
-    syntax = Syntax(source_code, "python", theme="monokai", line_numbers=True, word_wrap=True)
-    code_text = Text.from_markup(syntax.highlight(source_code).plain)
+    # syntax = Syntax(source_code, "python", theme="monokai", line_numbers=True, word_wrap=True)
+    # code_text = Text.from_markup(syntax.highlight(source_code).plain)
+    # TODO: syntax highlighting was messing with span selection. Also syntax highlighting wasn't showing up
+    code_text = Text(source_code)  # this preserves your exact positions
 
     # Apply color highlights to spans
     colors = ["on red", "on green", "on yellow", "on cyan", "on magenta", "on blue"]

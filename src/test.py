@@ -60,16 +60,11 @@ def test_example():
 
 def test_review():
     from .display import explain_code
-    examples = load_examples(here/'../examples/gdc_examples.yaml')
-    for example in examples:
-        spans = review_code(example)
-        explain_code(example['code'], spans)
+    examples = load_examples(here/'../examples/contrived_examples.yaml')
+    example = examples[0]
+    spans = review_code(example)
+    explain_code(example['code'], spans)
     
-    # print('-'*120)
-    # for span in spans:
-    #     selection = example['code'][span.start:span.stop]
-    #     print(f'```\n{selection}\n```\n\nReason: {span.reason}\n')
-
 
 
 if __name__ == '__main__':
