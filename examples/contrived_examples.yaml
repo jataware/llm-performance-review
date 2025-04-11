@@ -1,0 +1,194 @@
+- query: 'I have stat5 data in a file "stat5_data.csv" for two populations: JAK2 mutant and JAK2 wildtype. Please compare the STAT5 levels between the populations'
+  code: |
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from scipy.stats import mannwhitneyu, ttest_ind, shapiro
+
+    # Load data
+    df = pd.read_csv('stat5_data.csv')
+
+    # Separate the two populations
+    mutant = df[df['population'] == 'jak2_mutant']['stat5_level']
+    wildtype = df[df['population'] == 'jak2_wildtype']['stat5_level']
+
+    # Visualize the distributions
+    plt.figure(figsize=(10, 6))
+    sns.histplot(mutant, kde=True, label='JAK2 Mutant', stat="density", element="step")
+    sns.histplot(wildtype, kde=True, label='JAK2 Wildtype', stat="density", element="step")
+    plt.xlabel('STAT5 Level')
+    plt.ylabel('Density')
+    plt.title('Distribution of STAT5 Levels in Two Populations')
+    plt.legend()
+    plt.show()
+
+    # Test for normality
+    _, p_mutant_normal = shapiro(mutant)
+    _, p_wildtype_normal = shapiro(wildtype)
+
+    print(f"Normality p-values: Mutant={p_mutant_normal:.4f}, Wildtype={p_wildtype_normal:.4f}")
+
+    # Choose statistical test based on normality
+    if p_mutant_normal > 0.05 and p_wildtype_normal > 0.05:
+        # If both distributions are normal, use t-test
+        stat, p_value = ttest_ind(mutant, wildtype)
+        test_used = "T-test"
+    else:
+        # If not normal, use Mann-Whitney U test
+        stat, p_value = mannwhitneyu(mutant, wildtype, alternative='two-sided')
+        test_used = "Mann-Whitney U test"
+
+    print(f"{test_used} result: statistic={stat:.4f}, p-value={p_value:.4f}")
+
+
+
+- query: "I have a dataset of a survey on vaping and health outcomes ('vaping_health_data.csv' with columns 'Vaping Status', 'Age', 'Sex', 'Former Smoker', 'Chronic Cough', 'Shortness of Breath', 'Diagnosed Asthma', 'Income Level', 'Education', 'Prior Health Status'). Could you analyze if vaping causes adverse health outcomes?"
+  code: |
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
+    import statsmodels.api as sm
+    from sklearn.neighbors import NearestNeighbors
+
+    # Load dataset
+    df = pd.read_csv('vaping_health_data.csv')
+
+    # Preprocess
+    df['is_vaper'] = df['Vaping Status'].map({'Never': 0, 'Current': 1})
+    df['is_female'] = df['Sex'].map({'Male': 0, 'Female': 1})
+
+    # Create composite health outcome
+    df['has_respiratory_issue'] = (
+        (df['Chronic Cough'] == 1) |
+        (df['Shortness of Breath'] == 1) |
+        (df['Diagnosed Asthma'] == 1)
+    ).astype(int)
+
+    # Drop missing values
+    required_cols = ['is_vaper', 'has_respiratory_issue', 'Age', 'is_female',
+                    'Former Smoker', 'Income Level', 'Education', 'Prior Health Status']
+    df = df.dropna(subset=required_cols)
+
+    # ----------------------------------------
+    # STEP 1: Estimate Propensity Scores
+    # ----------------------------------------
+    confounders = ['Age', 'is_female', 'Former Smoker', 'Income Level', 'Education', 'Prior Health Status']
+    X = df[confounders]
+    y = df['is_vaper']
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    ps_model = LogisticRegression()
+    ps_model.fit(X_scaled, y)
+    df['propensity_score'] = ps_model.predict_proba(X_scaled)[:, 1]
+
+    # ----------------------------------------
+    # STEP 2: Matching (Nearest Neighbor Matching)
+    # ----------------------------------------
+    treated = df[df['is_vaper'] == 1]
+    control = df[df['is_vaper'] == 0]
+
+    nn = NearestNeighbors(n_neighbors=1)
+    nn.fit(control[['propensity_score']])
+    _, indices = nn.kneighbors(treated[['propensity_score']])
+    matched_control = control.iloc[indices.flatten()]
+    matched_df = pd.concat([treated, matched_control])
+
+    # ----------------------------------------
+    # STEP 3: Estimate Treatment Effect
+    # ----------------------------------------
+    X_matched = matched_df[['is_vaper']]
+    X_matched = sm.add_constant(X_matched)
+    y_matched = matched_df['has_respiratory_issue']
+
+    result = sm.Logit(y_matched, X_matched).fit()
+
+    coef = result.params['is_vaper']
+    odds_ratio = np.exp(coef)
+    conf_int = result.conf_int().loc['is_vaper']
+    conf_int_odds = np.exp(conf_int)
+    pval = result.pvalues['is_vaper']
+
+    print("\n=== Full Sample Analysis ===")
+    print(result.summary())
+    print(f"\nOdds Ratio: {odds_ratio:.3f}")
+    print(f"95% CI for OR: [{conf_int_odds[0]:.3f}, {conf_int_odds[1]:.3f}]")
+    print(f"P-value: {pval:.4f}")
+
+    # ----------------------------------------
+    # STEP 4: Age Group Breakdown
+    # ----------------------------------------
+    def age_group(age):
+        if age <= 25:
+            return 'Young (≤25)'
+        elif age <= 50:
+            return 'Middle (26–50)'
+        else:
+            return 'Older (>50)'
+
+    df['Age Group'] = df['Age'].apply(age_group)
+    print("\n=== Age Group Breakdown ===")
+
+    age_groups = df['Age Group'].unique()
+
+    for group in age_groups:
+        print(f"\n--- {group} ---")
+        sub_df = df[df['Age Group'] == group].copy()
+
+        # Re-estimate propensity scores within age group
+        X_sub = sub_df[confounders]
+        X_scaled_sub = scaler.fit_transform(X_sub)
+        ps_model_sub = LogisticRegression()
+        ps_model_sub.fit(X_scaled_sub, sub_df['is_vaper'])
+        sub_df['propensity_score'] = ps_model_sub.predict_proba(X_scaled_sub)[:, 1]
+
+        treated = sub_df[sub_df['is_vaper'] == 1]
+        control = sub_df[sub_df['is_vaper'] == 0]
+
+        if len(treated) == 0 or len(control) == 0:
+            print("Not enough data to compare in this group.")
+            continue
+
+        nn = NearestNeighbors(n_neighbors=1)
+        nn.fit(control[['propensity_score']])
+        _, indices = nn.kneighbors(treated[['propensity_score']])
+        matched_control = control.iloc[indices.flatten()]
+        matched_df = pd.concat([treated, matched_control])
+
+        X_matched = matched_df[['is_vaper']]
+        X_matched = sm.add_constant(X_matched)
+        y_matched = matched_df['has_respiratory_issue']
+
+        try:
+            result = sm.Logit(y_matched, X_matched).fit(disp=False)
+
+            coef = result.params['is_vaper']
+            odds_ratio = np.exp(coef)
+            conf_int = result.conf_int().loc['is_vaper']
+            conf_int_odds = np.exp(conf_int)
+            pval = result.pvalues['is_vaper']
+
+            print(f"Odds Ratio: {odds_ratio:.3f}")
+            print(f"95% CI for OR: [{conf_int_odds[0]:.3f}, {conf_int_odds[1]:.3f}]")
+            print(f"P-value: {pval:.4f}")
+
+            if pval < 0.05:
+                print("→ Significant association found in this group.")
+            else:
+                print("→ No statistically significant association.")
+        except:
+            print("→ Logistic regression failed (likely due to small sample or separation).")
+
+    # ----------------------------------------
+    # STEP 5: Visualization
+    # ----------------------------------------
+    sns.kdeplot(df[df['is_vaper'] == 1]['propensity_score'], label='Vapers')
+    sns.kdeplot(df[df['is_vaper'] == 0]['propensity_score'], label='Non-Vapers')
+    plt.title("Propensity Score Distribution")
+    plt.xlabel("Propensity Score")
+    plt.legend()
+    plt.show()
