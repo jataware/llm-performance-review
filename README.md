@@ -27,7 +27,6 @@ For the main experiment, the agent looks at the selected code+query and for each
 
 1. Install dependencies
     ```bash
-    # if you know how to use uv
     uv sync
     ```
 
@@ -37,16 +36,28 @@ For the main experiment, the agent looks at the selected code+query and for each
     conda activate myenv
     VIRTUAL_ENV=$(echo $CONDA_PREFIX)
     UV_PROJECT_ENVIRONMENT=$(echo $VIRTUAL_ENV)
+    UV_PYTHON=$(which python)
     
     # uv should now operate inside the conda env
-    # `uv sync` doesn't seem to respect the environment variables
-    # so use this command instead
-    uv pip sync pyproject.toml
+    uv sync
+    ```
+
+1. Set API keys
+
+    ```bash
+    # default uses openai gpt-4o
+    # can use any provider supported by archytas
+    export OPENAI_API_KEY=...
+    export GEMINI_API_KEY=...
+    export ANTHROPIC_API_KEY=...
     ```
 
 ### Running Experiment
 ```bash
-# from the root of the repo
+# if using uv's created env
+uv run -m src.test
+
+# if not using uv's env
 python -m src.test
 ```
 This will run the currently set up test which pulls in a single example and has the agent analyze and highlight it.
